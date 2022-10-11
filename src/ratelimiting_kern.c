@@ -230,7 +230,7 @@ int _xdp_ratelimiting(struct xdp_md *ctx)
       return XDP_DROP;
    }
 
-   bpf_tail_call(ctx, &xdp_rl_ingress_next_prog, 0);
+   //bpf_tail_call(ctx, &xdp_rl_ingress_next_prog, 0);
    return XDP_PASS;
 }
 
