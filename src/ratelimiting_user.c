@@ -21,15 +21,20 @@
 #include <limits.h>
 #include <stdlib.h>
 
-#include "bpf_load.h"
+//#include <bpf/bpf_helpers.h>
+#include <bpf/bpf_endian.h>
+
+//#include "bpf_load.h"
 #ifdef __linux__
-#include "bpf_util.h"
+//#include "bpf_util.h"
 #endif
+
 #ifdef WIN32
 #include <io.h>
 #include <winsock2.h>
 #include <netioapi.h>
 #define sleep(seconds) Sleep((seconds) * 1000)
+
 char* strsep(char** stringp, const char* delim)
 {
     static char* next_token = NULL;
@@ -53,6 +58,7 @@ int gettimeofday(struct timeval* tv, struct timezone* tz)
 }
 #include "bpf/bpf.h"
 #endif
+
 #include "bpf/libbpf.h"
 
 #include "constants.h"
