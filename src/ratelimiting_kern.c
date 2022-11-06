@@ -13,6 +13,8 @@
 #include <linux/ip.h>
 #include <linux/in.h>
 #include <linux/tcp.h>
+#include <iproute2/bpf_elf.h>
+
 
 /* TCP flags */
 #define TCP_FIN  0x01
@@ -25,13 +27,40 @@
 #define TCP_CWR  0x80
 #define TCP_FLAGS (TCP_FIN|TCP_SYN|TCP_RST|TCP_ACK|TCP_URG|TCP_ECE|TCP_CWR)
 
+#define bpf_printk(fmt, ...)                            \
+({                                                      \
+        char ____fmt[] = fmt;                           \
+        bpf_trace_printk(____fmt, sizeof(____fmt),      \
+                         ##__VA_ARGS__);                \
+})
+
+#ifndef __section
+# define __section(NAME)                  \
+	__attribute__((section(NAME), used))
+#endif
+
+#define PIN_GLOBAL_NS        2
+
 /* Stores the ratelimit value(per second) */
+
 struct bpf_map_def SEC("maps") rl_config_map = {
 	.type		= BPF_MAP_TYPE_ARRAY,
 	.key_size	= sizeof(uint32_t),
 	.value_size	= sizeof(uint64_t),
 	.max_entries	= 1,
 };
+
+
+/*
+//IRL
+struct bpf_elf_map rl_config_map __section("maps") = {
+	.type           = BPF_MAP_TYPE_ARRAY,
+	.size_key       = sizeof(uint32_t),
+	.size_value     = sizeof(uint64_t),
+	.pinning        = PIN_GLOBAL_NS,
+	.max_elem     = 1,
+};
+*/
 
 /* Maintains the timestamp of a window and the total number of
  * connections received in that window(window = 1 sec interval) */
@@ -70,7 +99,7 @@ struct bpf_map_def SEC("maps") rl_ports_map = {
 
 /* Maintains the prog fd of the next XDP program in the chain */
 struct bpf_map_def SEC("maps") xdp_rl_ingress_next_prog = {
-        .type           = BPF_MAP_TYPE_PROG_ARRAY,
+	 .type           = BPF_MAP_TYPE_PROG_ARRAY,
         .key_size       = sizeof(int),
         .value_size     = sizeof(int),
         .max_entries    = 1
@@ -87,48 +116,84 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
 
     struct ethhdr *eth = data;
 
+    //bpf_printk("Here %d \n",1);
+    
     /* Check if it is a valid ethernet packet */
     if (data + sizeof(*eth) > data_end)
         return XDP_DROP;
+
+    //  bpf_printk("Here %d \n",2);
 
     /* Ignore other than ethernet packets */
     uint16_t eth_type = eth->h_proto;
     if (ntohs(eth_type) != ETH_P_IP) {
         return XDP_PASS;
     }
+    //    bpf_printk("Here %d \n",3);
 
     /* Ignore other than IP packets */
     struct iphdr *iph = data + sizeof(struct ethhdr);
     if (iph + 1 > data_end)
         return XDP_PASS;
 
+    //bpf_printk("Here %d \n",4);
+
     /* Ignore other than TCP packets */
     if (iph->protocol != IPPROTO_TCP)
         return XDP_PASS;
 
+    //bpf_printk("Here %d \n",5);
+    
     /* Check if its valid tcp packet */
     struct tcphdr *tcph = (struct tcphdr *)(iph + 1);
     if (tcph + 1 > data_end)
         return XDP_PASS;
 
-    /* Ignore other than TCP-SYN packets */
-    if (!(tcph->syn & TCP_FLAGS))
-        return XDP_PASS;
+        
+    //bpf_printk("Here %d \n",6);
 
+    bpf_printk("TCP Syn : %d\n",tcph->syn & TCP_FLAGS);
+      
+    /* Ignore other than TCP-SYN packets */
+    if (!(tcph->syn & TCP_FLAGS)){
+      bpf_printk("Ignoring %d \n",6);
+        return XDP_PASS;
+    }
+
+    //     bpf_printk("Here %d \n",7);
+    
     /* Ignore TCP-SYN-ACK packets */
     if (tcph->ack & TCP_FLAGS)
         return XDP_PASS;
 
-    uint16_t dstport = bpf_ntohs(tcph->dest);
-    if(!bpf_map_lookup_elem(&rl_ports_map, &dstport))
-        return XDP_PASS;
+    // bpf_printk("Here %d \n",8);
 
+    uint16_t dstport = bpf_ntohs(tcph->dest);
+    bpf_printk("dstport %d \n",dstport);
+    uint8_t *mapport = bpf_map_lookup_elem(&rl_ports_map, &dstport);
+    bpf_printk("Check: mapport  %d\n",dstport);
+    if(!mapport){
+      bpf_printk("Return: Mapport %d\n",dstport);
+      //return XDP_PASS;
+    }
+    //bpf_printk("Pass: Mapport is %d\n",mapport);
+    
+    //bpf_printk("Here %d \n",9);
+
+    
     uint64_t rkey = 0;
     uint64_t *rate = bpf_map_lookup_elem(&rl_config_map, &rkey);
+    bpf_printk("Check: rate  %d\n",rkey);
+    if (!rate){
+        bpf_printk("Return: rate %d\n",rkey);
+	return XDP_PASS;
+    } else {
+         bpf_printk("Set: rate %d\n",*rate);
+    }
 
-    if (!rate)
-        return XDP_PASS;
-
+    *rate = 5; //IRL Hard coding
+    bpf_printk("pass rate: %d\n",*rate);
+        
     /* Current time in monotonic clock */
     uint64_t tnow = bpf_ktime_get_ns();
 
@@ -164,8 +229,15 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
 
     /* Just make the verifier happy, it would never be the case in real as
      * these two counters are initialised in the user space. */
-    if(!in_count || !drop_count)
-        return XDP_PASS;
+    if(!in_count || !drop_count){
+      bpf_printk("count null %d\n",rate);
+      return XDP_PASS;
+    }
+
+    bpf_printk("cw_key %u\n",cw_key);
+    bpf_printk("pw_key %u\n",pw_key);
+
+	
 
     /* Increment the total number of incoming connections counter */
 
@@ -192,10 +264,12 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
             /* Connection count in the current window already exceeded the
              * rate limit so drop this connection. */
             (*drop_count)++;
+	    bpf_printk("drop1  %d\n",*cw_count);
             return XDP_DROP;
         }
         /* Allow otherwise */
         (*cw_count)++;
+	bpf_printk("allow1  %d\n",*cw_count);
         return XDP_PASS;
     }
 
@@ -209,22 +283,39 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
     uint64_t total_count = (uint64_t)((pw_weight * (*pw_count)) +
         (*cw_count) * MULTIPLIER);
 
-    if (total_count > ((*rate) * MULTIPLIER))
+    bpf_printk("tot_ct : %d\n",total_count);
+    bpf_printk("cw1_ct : %d\n",*cw_count);
+
+
+    
+    //uint64_t temp = (*rate) * MULTIPLIER;
+    uint64_t temp = 5;
+    
+    bpf_printk("temp: %d\n",temp);
+
+    int c = (total_count > temp);
+    bpf_printk("c: %d\n",c);
+    
+    if (c )
+      //if (total_count > ((*rate) * MULTIPLIER))
     {
         /* Connection count from tnow to (tnow-1) exceeded the rate limit,
          * so drop this connection. */
         (*drop_count)++;
+	bpf_printk("drop2  %d\n",*cw_count);
         return XDP_DROP;
     }
     /* Allow otherwise */
     (*cw_count)++;
+    bpf_printk("allow3  %d\n",*cw_count);
     return XDP_PASS;
 }
 
 SEC("xdp_ratelimiting")
 int _xdp_ratelimiting(struct xdp_md *ctx)
 {
-   int rc = _xdp_ratelimit(ctx);
+  bpf_printk("rate_limiting\n");
+  int rc = _xdp_ratelimit(ctx);
 
    if (rc == XDP_DROP) {
       return XDP_DROP;
