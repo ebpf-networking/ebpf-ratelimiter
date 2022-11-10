@@ -22,7 +22,7 @@ XDP_USER_OBJ = ${XDP_USER_C:.c=.o}
 $(info XDP_OBJ="$(XDP_OBJ)")
 $(info XDP_C="$(XDP_C)")
 
-all: $(XDP_OBJ) $(XDP_USER_OBJ)
+all: $(XDP_OBJ) #$(XDP_USER_OBJ)
 
 $(XDP_OBJ): %.o: %.c 
 	$(CLANG)   $(BPF_CFLAGS) \
@@ -30,7 +30,6 @@ $(XDP_OBJ): %.o: %.c
         -Wno-compare-distinct-pointer-types \
 	-O2 -emit-llvm -c -g -o  ${@:.o=.ll} $<
 	$(LLC) -march=bpf -filetype=obj -o $@ ${@:.o=.ll}
-
 
 $(XDP_USER_OBJ): %.o: %.c 
 	$(CLANG)   $(BPF_CFLAGS) \
