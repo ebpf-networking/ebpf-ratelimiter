@@ -22,17 +22,14 @@ def deny_connections(num):
         scount = scount + 1
         pcount = pcount + 1
 
-
-
 if __name__ == "__main__":
     src_ip = "40.0.0.2"
     dst_ip = "40.0.0.1"
-    dport = 5
+    dport = 443
     pcount = 3000
     scount = 12345
     #deny_connections(100)
     allow_connections(10,2)
-    
 
 '''
 for i in range(100):
