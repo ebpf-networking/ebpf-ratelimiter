@@ -278,7 +278,7 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
 SEC("xdp_ratelimiting")
 int _xdp_ratelimiting(struct xdp_md *ctx)
 {
-  //bpf_printk("rate_limiting\n");
+  bpf_printk("rate_limiting\n");
   int rc = _xdp_ratelimit(ctx);
 
    if (rc == XDP_DROP) {

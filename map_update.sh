@@ -1,4 +1,4 @@
-iface=${1}
+iface=${VETH_NAME}
 ip link set dev ${iface} xdp obj ratelimiting_kern.o sec xdp_ratelimiting
 echo "Setting rate"
 #bpftool  map update id ${rate_map} key hex 00 00 00 00 value hex 04 00 00 00 00 00 00 00
