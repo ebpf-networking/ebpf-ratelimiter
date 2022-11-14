@@ -129,7 +129,7 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
         return XDP_PASS;
 
 
-    bpf_printk("NEW: TCP Syn : %d\n",tcph->syn & TCP_FLAGS);
+    bpf_printk("NEW: TCP Syn : %d\n", tcph->syn & TCP_FLAGS);
       
     /* Ignore other than TCP-SYN packets */
     if (!(tcph->syn & TCP_FLAGS)){
@@ -157,8 +157,8 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
     }
 
     //*rate = 5; //IRL Hard coding
-    bpf_printk("pass rate: %d\n",*rate);
-        
+    bpf_printk("Allowed connections rate: %d\n", *rate);
+
     /* Current time in monotonic clock */
     uint64_t tnow = bpf_ktime_get_ns();
 
@@ -200,10 +200,10 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
       bpf_printk("count null %d\n",rate);
       return XDP_PASS;
     }
-
+/*
     bpf_printk("cw_key %u\n",cw_key);
     bpf_printk("pw_key %u\n",pw_key);
-
+*/
     /* Increment the total number of incoming connections counter */
 
     (*in_count)++;
@@ -229,12 +229,12 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
             /* Connection count in the current window already exceeded the
              * rate limit so drop this connection. */
             (*drop_count)++;
-	    bpf_printk("DROP CONNECTION: CT  %d\n",*cw_count);
+            bpf_printk("DROPPING CONNECTION: CT  %d\n",*cw_count);
             return XDP_DROP;
         }
         /* Allow otherwise */
         (*cw_count)++;
-	bpf_printk("ALLOW CONNECTION: CT  %d\n",*cw_count);
+        bpf_printk("ALLOWING CONNECTION: CT %d\n",*cw_count);
         return XDP_PASS;
     }
 
@@ -248,8 +248,8 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
     uint64_t total_count = (uint64_t)((pw_weight * (*pw_count)) +
         (*cw_count) * MULTIPLIER);
 
-    bpf_printk("tot_ct : %d\n",total_count);
-    bpf_printk("cw1_ct : %d\n",*cw_count);
+    bpf_printk("tot_ct : %d\n", total_count);
+    bpf_printk("cw1_ct : %d\n", *cw_count);
 
     //uint64_t temp = (*rate) * MULTIPLIER;
     //uint64_t temp = 5;
@@ -266,12 +266,12 @@ static __always_inline int _xdp_ratelimit(struct xdp_md *ctx)
         /* Connection count from tnow to (tnow-1) exceeded the rate limit,
          * so drop this connection. */
         (*drop_count)++;
-	bpf_printk("DROP CONNECTION: CT  %d\n",*cw_count);
+        bpf_printk("DROPPING CONNECTION: CT  %d\n", *cw_count);
         return XDP_DROP;
     }
     /* Allow otherwise */
     (*cw_count)++;
-    bpf_printk("ALLOW CONNECTION: CT  %d\n",*cw_count);
+    bpf_printk("ALLOWING CONNECTION: CT  %d\n",*cw_count);
     return XDP_PASS;
 }
 
