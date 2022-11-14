@@ -40,3 +40,4 @@ if __name__ == "__main__":
         deny_connections(100)
     else:
         print("Unknown mode for packet crafter. Please pass allow/deny\n")
+
