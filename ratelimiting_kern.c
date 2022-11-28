@@ -42,18 +42,25 @@
 #define PIN_GLOBAL_NS        2
 
 /* Stores the ratelimit value(per second) */
-//Move map defintions to newer format 
+/*
 struct bpf_elf_map rl_config_map __section("maps") = {
 	.type           = BPF_MAP_TYPE_ARRAY,
 	.size_key       = sizeof(uint32_t),
 	.size_value     = sizeof(uint64_t),
 	.pinning        = PIN_GLOBAL_NS,
 	.max_elem     = 1,
-};
+};*/
+struct {
+    __uint(type, BPF_MAP_TYPE_ARRAY);
+    __uint(max_entries, 1);
+    __type(key, uint32_t);
+    __type(value, uint64_t);
+} rl_config_map SEC("maps");
 
 
 /* Maintains the timestamp of a window and the total number of
  * connections received in that window(window = 1 sec interval) */
+/*
 struct bpf_elf_map SEC("maps") rl_window_map = {
 	.type		= BPF_MAP_TYPE_HASH,
 	.size_key	= sizeof(uint64_t),
@@ -61,9 +68,17 @@ struct bpf_elf_map SEC("maps") rl_window_map = {
 	.pinning        = PIN_GLOBAL_NS,
 	.max_elem	= 100,
 };
+*/
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, 100);
+    __type(key, uint64_t);
+    __type(value, uint64_t);
+} rl_window_map SEC("maps");
 
 /* Maintains the total number of connections received(TCP-SYNs)
  * Used only for metrics visibility */
+/*
 struct bpf_elf_map SEC("maps") rl_recv_count_map = {
 	.type		= BPF_MAP_TYPE_HASH,
 	.size_key	= sizeof(uint64_t),
@@ -72,9 +87,17 @@ struct bpf_elf_map SEC("maps") rl_recv_count_map = {
 	.max_elem	= 1
 	
 };
+*/
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, 1);
+    __type(key, uint64_t);
+    __type(value, uint64_t);
+} rl_recv_count_map SEC("maps");
 
 /* Maintains the total number of connections dropped as the ratelimit is hit
  * Used only for metrics visibility */
+/*
 struct bpf_elf_map SEC("maps") rl_drop_count_map = {
 	.type		= BPF_MAP_TYPE_HASH,
 	.size_key	= sizeof(uint64_t),
@@ -82,8 +105,16 @@ struct bpf_elf_map SEC("maps") rl_drop_count_map = {
 	.pinning        = PIN_GLOBAL_NS,
 	.max_elem	= 1
 };
+*/
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, 1);
+    __type(key, uint64_t);
+    __type(value, uint64_t);
+} rl_drop_count_map SEC("maps");
 
 /* Maintains the ports to be ratelimited */
+/*
 struct bpf_elf_map SEC("maps") rl_ports_map = {
         .type           = BPF_MAP_TYPE_HASH,
         .size_key       = sizeof(uint16_t),
@@ -91,7 +122,13 @@ struct bpf_elf_map SEC("maps") rl_ports_map = {
 	 .pinning        = PIN_GLOBAL_NS,
         .max_elem    = 50
 };
-
+*/
+struct {
+    __uint(type, BPF_MAP_TYPE_HASH);
+    __uint(max_entries, 50);
+    __type(key, uint16_t);
+    __type(value, uint8_t);
+} rl_ports_map SEC("maps");
 
 
 /* TODO Use atomics or spin locks where naive increments are used depending
