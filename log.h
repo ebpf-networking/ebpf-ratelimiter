@@ -4,7 +4,7 @@
 /*
  * file log.h
  *
- * brief error reporting
+ * brief error reporting for the userspace.
  *
  */
 #ifndef LOG_H

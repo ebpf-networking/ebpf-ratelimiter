@@ -1,15 +1,10 @@
-#ebpf3
 BASEDIR=/root/github/
-#ebpf1
-#BASEDIR=/home/sayandes/
-#CLANG=$(BASEDIR)/katran/_build//deps/clang/clang+llvm-12.0.0-x86_64-linux-gnu-ubuntu-20.04/bin/clang 
+
 CLANG=clang
 LLC=llc
-#LLC=$(BASEDIR)/katran/_build//deps/clang/clang+llvm-12.0.0-x86_64-linux-gnu-ubuntu-20.04/bin/llc
 INLCUDE_SYS=/usr/include
 INCLUDE_LOC=/include
 XDP_TARGETS := ratelimiting_kern 
-#XDP_TARGETS := ratelimiting_kern-TC 
 XDP_USER_TARGETS := ratelimiting_user
 
 BPF_CFLAGS ?= -I$(INLCUDE_SYS) -I$(INCLUDE_LOC)
@@ -37,4 +32,3 @@ $(XDP_USER_OBJ): %.o: %.c
         -Wno-compare-distinct-pointer-types \
 	-O2 -emit-llvm -c -g -o  ${@:.o=.ll} $<
 	$(LLC) -march=bpf -filetype=obj -o $@ ${@:.o=.ll}
-
